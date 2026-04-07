@@ -12,7 +12,11 @@
 <img src="https://raw.githubusercontent.com/roshan669/NetPrime/refs/heads/master/assets/images/ss1.jpeg" height="250" alt="TimeKeeper Screenshot 1" style=" border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); flex-shrink: 0;"/>
 <img src="https://raw.githubusercontent.com/roshan669/NetPrime/refs/heads/master/assets/images/ss2.jpg" height="250" alt="TimeKeeper Screenshot 1" style=" border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); flex-shrink: 0;"/>
 <img src="https://raw.githubusercontent.com/roshan669/NetPrime/refs/heads/master/assets/images/ss3.jpg" height="250" alt="TimeKeeper Screenshot 1" style=" border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); flex-shrink: 0;"/>
+  <img src="https://raw.githubusercontent.com/roshan669/NetPrime/refs/heads/master/assets/images/Screenshot_2026-04-07-11-35-05-02_6a77070d6b85e13b17ebe09473e3b8de.jpg" height="250" alt="TimeKeeper Screenshot 1" style=" border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); flex-shrink: 0;"/>
+  <img src="https://raw.githubusercontent.com/roshan669/NetPrime/refs/heads/master/assets/images/Screenshot_2026-04-07-11-35-29-00_6a77070d6b85e13b17ebe09473e3b8de.jpg" height="250" alt="TimeKeeper Screenshot 1" style=" border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); flex-shrink: 0;"/>
 </div>
+
+## Tech Used
 
 ### Download the latest version
 

@@ -25,7 +25,7 @@
 - **Axios** - HTTP client for API requests
 - **Expo Router** - File-based routing for React Native
 - **React Native Reanimated** - Smooth animations and gestures
-- **React Native Web** - Run React Native on the web
+- **React Native Web View** - Run web on the app
 
 ## Download the latest version
 

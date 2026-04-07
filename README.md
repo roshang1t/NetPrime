@@ -18,6 +18,15 @@
 
 ## Tech Used
 
-### Download the latest version
+- **React Native** - Cross-platform mobile development framework
+- **Expo** - Development platform and tools for React Native
+- **TypeScript** - Type-safe JavaScript
+- **React Navigation** - Navigate between screens and manage navigation stack
+- **Axios** - HTTP client for API requests
+- **Expo Router** - File-based routing for React Native
+- **React Native Reanimated** - Smooth animations and gestures
+- **React Native Web** - Run React Native on the web
+
+## Download the latest version
 
 [Download](https://github.com/roshan669/NetPrime/releases/download/NetPrime_Release/NetPrime.apk)

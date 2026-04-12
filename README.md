@@ -1,8 +1,10 @@
 # NetPrime
 
-[Download ⬇️](https://github.com/roshan669/NetPrime/releases/download/NetPrime_Release/NetPrime.apk)
+## Download APK ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/roshan669/NetPrime/total?link=https%3A%2F%2Fgithub.com%2Froshan669%2FNetPrime%2Freleases&label=Github%20Downloads)
 
-<img src="https://raw.githubusercontent.com/roshan669/NetPrime/refs/heads/master/assets/images/icon.png" width="100" height="100">
+[![Download Apk](https://custom-icon-badges.demolab.com/badge/-Download_From_Github-black?style=for-the-badge&logo=download&logoColor=white)](https://github.com/roshan669/NetPrime/releases/latest)
+
+<img src="https://raw.githubusercontent.com/roshan669/NetPrime/refs/heads/master/assets/images/icon.png" width="200" height="200">
 
 ## A free movie and web series streaming application, because everyone deserves a good movie night.
 
@@ -34,4 +36,4 @@
 
 ## Download the latest version
 
-[Download](https://github.com/roshan669/NetPrime/releases/download/NetPrime_Release/NetPrime.apk)
+[![Download Apk](https://custom-icon-badges.demolab.com/badge/-Download_From_Github-black?style=for-the-badge&logo=download&logoColor=white)](https://github.com/roshan669/NetPrime/releases/latest)

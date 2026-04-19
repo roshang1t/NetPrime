@@ -1,10 +1,10 @@
-# NetPrime
+# NetPrime ![Github Stars](https://img.shields.io/github/stars/roshan669/NetPrime?style=plastic)
 
 ## Download APK ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/roshan669/NetPrime/total?link=https%3A%2F%2Fgithub.com%2Froshan669%2FNetPrime%2Freleases&label=Github%20Downloads)
 
 [![Download Apk](https://custom-icon-badges.demolab.com/badge/-Download_From_Github-black?style=for-the-badge&logo=download&logoColor=white)](https://github.com/roshan669/NetPrime/releases/latest)
 
-[![Download Apk](https://custom-icon-badges.demolab.com/badge/-Download_Instantly_From_Github-black?style=for-the-badge&logo=download&logoColor=white)](https://github.com/roshan669/NetPrime/releases/download/NetPrime_Release/NetPrime.apk)
+[![Download Apk](https://custom-icon-badges.demolab.com/badge/-Download_Instantly_From_Github-black?style=for-the-badge&logo=download&logoColor=white)](https://github.com/roshan669/NetPrime/releases/download/NetPrime_Release/NetPrime.apk)  
 
 <img src="https://raw.githubusercontent.com/roshan669/NetPrime/refs/heads/master/assets/images/icon.png" width="200" height="200">
 

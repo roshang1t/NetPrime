@@ -1,4 +1,4 @@
-# NetPrime ![Github Stars](https://img.shields.io/github/stars/roshan669/NetPrime?style=plastic)
+# NetPrime ![Github Stars](https://img.shields.io/github/stars/roshan669/NetPrime?style=social)
 
 ## Download APK ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/roshan669/NetPrime/total?link=https%3A%2F%2Fgithub.com%2Froshan669%2FNetPrime%2Freleases&label=Github%20Downloads)
 

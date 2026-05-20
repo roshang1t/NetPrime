@@ -2,10 +2,7 @@
 
 import { Colors } from "@/constants/Colors";
 import { Movie } from "@/contexts/movieContext";
-import {
-  API_BEARER_TOKEN,
-  API_URL,
-} from "@/contexts/movieContext/movieContext";
+import { API_HEADERS, API_URL } from "@/contexts/movieContext/movieContext";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -47,18 +44,15 @@ const Search: React.FC = () => {
       const response = await fetch(
         `${API_URL}trending/all/day?language=en-US&page=1`,
         {
-          headers: {
-            Authorization: `Bearer ${API_BEARER_TOKEN}`,
-            accept: "application/json",
-          },
-        }
+          headers: API_HEADERS,
+        },
       );
 
       if (!response.ok) {
         // Handle HTTP errors (e.g., 401 Unauthorized, 404 Not Found)
         const errorData = await response.json();
         throw new Error(
-          errorData.status_message || `HTTP error! status: ${response.status}`
+          errorData.status_message || `HTTP error! status: ${response.status}`,
         );
       }
 
@@ -79,119 +73,122 @@ const Search: React.FC = () => {
   }, []);
 
   // Use useCallback to memoize the handleSearch function itself
-  const handleSearch = useCallback(async (query: string) => {
-    // Increment the ID for this specific call initiation.
-    // Use .current on the ref.
-    const thisCallId = ++latestCallIdRef.current;
+  const handleSearch = useCallback(
+    async (query: string) => {
+      // Increment the ID for this specific call initiation.
+      // Use .current on the ref.
+      const thisCallId = ++latestCallIdRef.current;
 
-    setSearchQuery(query); // Update the input query display immediately
+      setSearchQuery(query); // Update the input query display immediately
 
-    // Clear any existing debounce timer immediately
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = null; // Clear the ref after clearing
-    }
+      // Clear any existing debounce timer immediately
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null; // Clear the ref after clearing
+      }
 
-    // Abort any previous in-flight fetch request immediately
-    if (currentAbortControllerRef.current) {
-      currentAbortControllerRef.current.abort();
+      // Abort any previous in-flight fetch request immediately
+      if (currentAbortControllerRef.current) {
+        currentAbortControllerRef.current.abort();
 
-      currentAbortControllerRef.current = null; // Clear the ref after aborting
-    }
+        currentAbortControllerRef.current = null; // Clear the ref after aborting
+      }
 
-    if (!query) {
-      // setSearchResults([]);
+      if (!query) {
+        // setSearchResults([]);
+        setSearchError(null);
+        setSearchLoading(false);
+        fetchInitial();
+        // If query is cleared, reset the latest ID so a new search is truly 'first'.
+        latestCallIdRef.current = 0;
+        return;
+      }
+
+      // Indicate loading as soon as a query is present
+      if (!searchLoading) setSearchLoading(true);
       setSearchError(null);
-      setSearchLoading(false);
-      fetchInitial();
-      // If query is cleared, reset the latest ID so a new search is truly 'first'.
-      latestCallIdRef.current = 0;
-      return;
-    }
 
-    // Indicate loading as soon as a query is present
-    if (!searchLoading) setSearchLoading(true);
-    setSearchError(null);
-
-    // Set a new debounce timeout for this specific call
-    searchTimeoutRef.current = setTimeout(async () => {
-      // --- CRITICAL CHECK 1: Is this still the latest intended call after debounce? ---
-      // Compare this call's ID with the globally latest initiated ID
-      if (thisCallId !== latestCallIdRef.current) {
-        setSearchLoading(false); // Make sure loading is turned off for abandoned calls
-        return; // Exit here if a newer call has already started
-      }
-
-      // Create a new AbortController for this fetch operation
-      const controller = new AbortController();
-      currentAbortControllerRef.current = controller; // Store it in the ref
-      const signal = controller.signal;
-
-      try {
-        const response = await fetch(
-          `${API_URL}search/multi?query=${encodeURIComponent(
-            query
-          )}&language=en-US`,
-          {
-            headers: {
-              accept: "application/json",
-              Authorization: `Bearer ${API_BEARER_TOKEN}`,
-            },
-            signal: signal, // Link fetch to AbortController
-          }
-        );
-
-        // --- CRITICAL CHECK 2: After fetch, is this still the latest intended call? ---
-        // This handles cases where a new call starts *during* the fetch operation.
+      // Set a new debounce timeout for this specific call
+      searchTimeoutRef.current = setTimeout(async () => {
+        // --- CRITICAL CHECK 1: Is this still the latest intended call after debounce? ---
+        // Compare this call's ID with the globally latest initiated ID
         if (thisCallId !== latestCallIdRef.current) {
-          return; // Exit if newer call exists
+          setSearchLoading(false); // Make sure loading is turned off for abandoned calls
+          return; // Exit here if a newer call has already started
         }
 
-        // Check if the fetch was explicitly aborted (e.g., by a newer call)
-        if (signal.aborted) {
-          return; // Exit if aborted
-        }
+        // Create a new AbortController for this fetch operation
+        const controller = new AbortController();
+        currentAbortControllerRef.current = controller; // Store it in the ref
+        const signal = controller.signal;
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.status_message || `HTTP error! status: ${response.status}`
+        try {
+          const response = await fetch(
+            `${API_URL}search/multi?query=${encodeURIComponent(
+              query,
+            )}&language=en-US`,
+            {
+              headers: API_HEADERS,
+              signal: signal, // Link fetch to AbortController
+            },
           );
-        }
-        const data = await response.json();
 
-        // --- CRITICAL CHECK 3: Final check before updating state ---
-        if (thisCallId === latestCallIdRef.current) {
-          const filteredData = data.results.filter((item: Movie) => {
-            if (!item.poster_path) return false;
-            return true;
-          });
-          setSearchResults(filteredData || []);
-        } else {
+          // --- CRITICAL CHECK 2: After fetch, is this still the latest intended call? ---
+          // This handles cases where a new call starts *during* the fetch operation.
+          if (thisCallId !== latestCallIdRef.current) {
+            return; // Exit if newer call exists
+          }
+
+          // Check if the fetch was explicitly aborted (e.g., by a newer call)
+          if (signal.aborted) {
+            return; // Exit if aborted
+          }
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(
+              errorData.status_message ||
+                `HTTP error! status: ${response.status}`,
+            );
+          }
+          const data = await response.json();
+
+          // --- CRITICAL CHECK 3: Final check before updating state ---
+          if (thisCallId === latestCallIdRef.current) {
+            const filteredData = data.results.filter((item: Movie) => {
+              if (!item.poster_path) return false;
+              return true;
+            });
+            setSearchResults(filteredData || []);
+          } else {
+          }
+        } catch (err) {
+          // Check if the error is due to abortion (an expected "cancellation")
+          if (err instanceof DOMException && err.name === "AbortError") {
+            console.log(`Call ID ${thisCallId} was aborted.`);
+          }
+          // Only set error state if it's not an abort and it's for the currently latest call
+          else if (thisCallId === latestCallIdRef.current) {
+            setSearchError(
+              err instanceof Error ? err.message : "Unknown error",
+            );
+            setSearchResults([]); // Clear results on error for the latest call
+          } else {
+            console.log(
+              `Error occurred for an outdated call (ID: ${thisCallId}), ignoring.`,
+            );
+          }
+        } finally {
+          // --- CRITICAL CHECK 4: Ensure loading state is only managed by the latest call ---
+          if (thisCallId === latestCallIdRef.current) {
+            setSearchLoading(false);
+          }
+          currentAbortControllerRef.current = null; // Always clear the controller ref when done
         }
-      } catch (err) {
-        // Check if the error is due to abortion (an expected "cancellation")
-        if (err instanceof DOMException && err.name === "AbortError") {
-          console.log(`Call ID ${thisCallId} was aborted.`);
-        }
-        // Only set error state if it's not an abort and it's for the currently latest call
-        else if (thisCallId === latestCallIdRef.current) {
-          setSearchError(err instanceof Error ? err.message : "Unknown error");
-          setSearchResults([]); // Clear results on error for the latest call
-        } else {
-          console.log(
-            `Error occurred for an outdated call (ID: ${thisCallId}), ignoring.`
-          );
-        }
-      } finally {
-        // --- CRITICAL CHECK 4: Ensure loading state is only managed by the latest call ---
-        if (thisCallId === latestCallIdRef.current) {
-          setSearchLoading(false);
-        }
-        currentAbortControllerRef.current = null; // Always clear the controller ref when done
-      }
-    }, 500); // Debounce time: 300 milliseconds
-  }, []); // Empty dependency array means this function is created once
+      }, 500); // Debounce time: 300 milliseconds
+    },
+    [fetchInitial, searchLoading],
+  ); // Keep handler aligned with the initial fetch and loading state
 
   // Optional: Cleanup on unmount
   useEffect(() => {
@@ -204,7 +201,7 @@ const Search: React.FC = () => {
         currentAbortControllerRef.current.abort();
       }
     };
-  }, []);
+  }, [fetchInitial]);
 
   // Smooth transition from shimmer to content
   useEffect(() => {

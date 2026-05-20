@@ -1,8 +1,6 @@
 import { Colors } from "@/constants/Colors";
-import {
-  API_BEARER_TOKEN,
-  API_URL,
-} from "@/contexts/movieContext/movieContext";
+import { API_HEADERS, API_URL } from "@/contexts/movieContext/movieContext";
+import { addToWatchHistory } from "@/utils/history";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useGlobalSearchParams, useNavigation, useRouter } from "expo-router";
@@ -123,7 +121,7 @@ const TvDetails: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [details, setDetails] = useState<TvShowDetailsData | null>(null);
   const [seasonDetails, setSeasonDetails] = useState<SeasonDetailsData | null>(
-    null
+    null,
   ); // State for selected season's episodes
   const [selectedSeasonNumber, setSelectedSeasonNumber] = useState<
     number | null
@@ -158,16 +156,14 @@ const TvDetails: React.FC = () => {
         const response = await fetch(
           `${API_URL}tv/${tvShowId}?language=en-US`,
           {
-            headers: {
-              Authorization: `Bearer ${API_BEARER_TOKEN}`,
-              accept: "application/json",
-            },
-          }
+            headers: API_HEADERS,
+          },
         );
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(
-            errorData.status_message || `HTTP error! status: ${response.status}`
+            errorData.status_message ||
+              `HTTP error! status: ${response.status}`,
           );
         }
         const data: TvShowDetailsData = await response.json();
@@ -178,7 +174,7 @@ const TvDetails: React.FC = () => {
           // Find the first season that is not "Specials" (season_number 0) and has episodes
           const defaultSeason =
             data.seasons.find(
-              (season) => season.season_number > 0 && season.episode_count > 0
+              (season) => season.season_number > 0 && season.episode_count > 0,
             ) || data.seasons[0]; // Fallback to Season 0 or first if no other valid found
 
           if (defaultSeason) {
@@ -215,16 +211,14 @@ const TvDetails: React.FC = () => {
         const response = await fetch(
           `${API_URL}tv/${tvShowId}/season/${selectedSeasonNumber}?language=en-US`,
           {
-            headers: {
-              Authorization: `Bearer ${API_BEARER_TOKEN}`,
-              accept: "application/json",
-            },
-          }
+            headers: API_HEADERS,
+          },
         );
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(
-            errorData.status_message || `HTTP error! status: ${response.status}`
+            errorData.status_message ||
+              `HTTP error! status: ${response.status}`,
           );
         }
         const data: SeasonDetailsData = await response.json();
@@ -234,7 +228,7 @@ const TvDetails: React.FC = () => {
           setError(err.message);
         } else {
           setError(
-            `An unknown error occurred while fetching Season ${selectedSeasonNumber} details.`
+            `An unknown error occurred while fetching Season ${selectedSeasonNumber} details.`,
           );
         }
         setSeasonDetails(null);
@@ -363,6 +357,14 @@ const TvDetails: React.FC = () => {
   }
 
   const handlePress = (ep: number) => {
+    void addToWatchHistory({
+      id: tvShowId,
+      title: details.name,
+      type: "tv",
+      season: selectedSeasonNumber,
+      episode: ep,
+      poster_path: details.poster_path,
+    });
     router.push({
       pathname: "/(player)/player",
       params: {
@@ -370,6 +372,8 @@ const TvDetails: React.FC = () => {
         type: "tv",
         season: selectedSeasonNumber,
         ep,
+        title: details.name,
+        poster_path: details.poster_path || "",
       },
     });
   };
@@ -377,8 +381,8 @@ const TvDetails: React.FC = () => {
   const imageUrl = details.backdrop_path
     ? `https://image.tmdb.org/t/p/w780${details.backdrop_path}`
     : details.poster_path
-    ? `https://image.tmdb.org/t/p/w500${details.poster_path}`
-    : null;
+      ? `https://image.tmdb.org/t/p/w500${details.poster_path}`
+      : null;
 
   return (
     <>

@@ -11,7 +11,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 export const unstable_settings = {
   initialRouteName: "index",
   // Only include these as tabs
-  tabs: ["index", "search"],
+  tabs: ["index", "search", "more"],
 };
 
 export default function RootLayout() {
@@ -67,6 +67,15 @@ export default function RootLayout() {
               title: "search",
               tabBarIcon: ({ color }) => (
                 <MaterialIcons size={28} name="search" color={color} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="more"
+            options={{
+              title: "More",
+              tabBarIcon: ({ color }) => (
+                <MaterialIcons size={28} name="menu" color={color} />
               ),
             }}
           />

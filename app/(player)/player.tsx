@@ -1,3 +1,4 @@
+import { addToWatchHistory } from "@/utils/history";
 import { Ionicons } from "@expo/vector-icons";
 import { useKeepAwake } from "expo-keep-awake";
 import { useGlobalSearchParams, useNavigation } from "expo-router";
@@ -18,7 +19,7 @@ import WebView from "react-native-webview";
 import { Colors } from "react-native/Libraries/NewAppScreen"; // Make sure Colors is correctly imported or defined
 
 const GITHUB_RAW_JSON_URL =
-  "https://raw.githubusercontent.com/roshan669/Uott/refs/heads/master/providers.json";
+  "https://raw.githubusercontent.com/roshang1t/NetPrime/refs/heads/master/providers.json";
 
 interface Provider {
   // Renamed from 'providers' to 'Provider' for single item type
@@ -39,11 +40,17 @@ export const Player: React.FC = () => {
     type: string;
     season?: string;
     ep?: string;
+    title?: string;
+    poster_path?: string;
+  }>();
+  const { title, poster_path } = useGlobalSearchParams<{
+    title?: string;
+    poster_path?: string;
   }>();
 
   const [providers, setProviders] = useState<Provider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
-    null
+    null,
   ); // State to hold the currently selected provider
   const [loading, setLoading] = useState(true); // Added loading state for initial fetch
   const [error, setError] = useState<unknown>(null); // Explicitly setting to null
@@ -54,6 +61,17 @@ export const Player: React.FC = () => {
   const navigation = useNavigation();
 
   useEffect(() => {
+    if (id) {
+      void addToWatchHistory({
+        id,
+        title: title || `${type === "tv" ? "TV" : "Movie"} ${id}`,
+        type,
+        season,
+        episode: ep,
+        poster_path,
+      });
+    }
+
     const fetchEmbedProviders = async () => {
       try {
         const response = await fetch(GITHUB_RAW_JSON_URL);
@@ -75,7 +93,7 @@ export const Player: React.FC = () => {
     };
 
     fetchEmbedProviders();
-  }, []); // Empty dependency array means this runs once on component mount
+  }, [id, title, type, season, ep, poster_path]);
 
   useEffect(() => {
     navigation.setOptions({ headerShown: false, animation: "fade" });
@@ -88,24 +106,24 @@ export const Player: React.FC = () => {
 
   // Handle URL navigation inside WebView
   const handleShouldStartLoadWithRequest = (
-    event: ShouldStartLoadEvent
+    event: ShouldStartLoadEvent,
   ): boolean => {
     const { url } = event;
 
     // Dynamically check against the base domains of all fetched providers
-    const allowedDomains = providers
+    const allowedDomains: string[] = providers
       .map((p) => {
         try {
           return `${p.allowedDomain}`;
         } catch (e) {
           console.warn(
             `Invalid URL format in provider ${p.name}: ${p.urls.movie}`,
-            e
+            e,
           );
           return null;
         }
       })
-      .filter(Boolean); // Filter out any null values from invalid URLs
+      .filter((domain): domain is string => Boolean(domain)); // Filter out any null values from invalid URLs
 
     if (allowedDomains.some((domain) => url.startsWith(domain))) {
       return true; // Allow navigation to any of the fetched provider domains
@@ -131,7 +149,7 @@ export const Player: React.FC = () => {
       const data = JSON.parse(event.nativeEvent.data);
       if (data && data.type === "fullscreenchange" && data.isFullscreen) {
         ScreenOrientation.lockAsync(
-          ScreenOrientation.OrientationLock.LANDSCAPE
+          ScreenOrientation.OrientationLock.LANDSCAPE,
         );
       } else if (
         data &&

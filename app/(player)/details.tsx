@@ -1,9 +1,7 @@
 import { Colors } from "@/constants/Colors";
 import { Movie } from "@/contexts/movieContext";
-import {
-  API_BEARER_TOKEN,
-  API_URL,
-} from "@/contexts/movieContext/movieContext";
+import { API_HEADERS, API_URL } from "@/contexts/movieContext/movieContext";
+import { addToWatchHistory } from "@/utils/history";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useGlobalSearchParams, useNavigation, useRouter } from "expo-router";
@@ -56,18 +54,15 @@ const Details: React.FC = () => {
       const response = await fetch(
         `${API_URL}movie/${id}/similar?language=en-US&page=1`,
         {
-          headers: {
-            Authorization: `Bearer ${API_BEARER_TOKEN}`,
-            accept: "application/json",
-          },
-        }
+          headers: API_HEADERS,
+        },
       );
 
       if (!response.ok) {
         // Handle HTTP errors (e.g., 401 Unauthorized, 404 Not Found)
         const errorData = await response.json();
         throw new Error(
-          errorData.status_message || `HTTP error! status: ${response.status}`
+          errorData.status_message || `HTTP error! status: ${response.status}`,
         );
       }
 
@@ -91,15 +86,13 @@ const Details: React.FC = () => {
     async function fetchDetail() {
       try {
         const response = await fetch(`${API_URL}movie/${id}?language=en-US`, {
-          headers: {
-            Authorization: `Bearer ${API_BEARER_TOKEN}`,
-            accept: "application/json",
-          },
+          headers: API_HEADERS,
         });
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(
-            errorData.status_message || `HTTP error! status: ${response.status}`
+            errorData.status_message ||
+              `HTTP error! status: ${response.status}`,
           );
         }
         const data = await response.json();
@@ -202,9 +195,20 @@ const Details: React.FC = () => {
   }
 
   const handlePress = () => {
+    void addToWatchHistory({
+      id: id?.toString(),
+      title: details.title,
+      type: "movie",
+      poster_path: details.poster_path,
+    });
     router.push({
       pathname: "/(player)/player",
-      params: { id: id.toString(), type: "movie" },
+      params: {
+        id: id.toString(),
+        type: "movie",
+        title: details.title,
+        poster_path: details.poster_path || "",
+      },
     });
   };
 

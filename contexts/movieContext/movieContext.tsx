@@ -10,12 +10,17 @@ import { Movie, MovieContextType, Series } from "./types";
 
 // TMDb API Configuration
 export const API_URL = "https://netstream.dhamiroshan730.workers.dev/";
-const API_URI = "https://db.bitcine.app/3/";
-
-const API_KEY = "af6dd5a9d0f83bd83d1f216d67deacf3";
 
 export const API_BEARER_TOKEN =
   "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhZjZkZDVhOWQwZjgzYmQ4M2QxZjIxNmQ2N2RlYWNmMyIsIm5iZiI6MTcxNTUxOTIyNy4wMTIsInN1YiI6IjY2NDBiZWZiMThhZDFlNzU4ODIwN2VmMyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZPlxXSMmTnIvs-nuuwalmPbtPXW383jBxiAheNnAKWA";
+
+export const API_HEADERS = {
+  Authorization: `Bearer ${API_BEARER_TOKEN}`,
+  accept: "application/json",
+  "Accept-Encoding": "identity",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
+};
 
 // Default context value for initial creation and for cases where it's used outside a Provider.
 // Ensure all properties from MovieContextType are present.
@@ -39,7 +44,7 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
   const [hasMore, setHasMore] = useState<boolean>(true);
 
   // Remove useCallback, make fetchPopularMovies a regular function
-  async function fetchPopularMovies(page: number = 1) {
+  const fetchPopularMovies = useCallback(async (page: number = 1) => {
     // if (loadingMovies) return; // Prevent multiple fetches
     setLoadingMovies(true);
     setError(null); // Clear previous errors
@@ -48,18 +53,15 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
       const response = await fetch(
         `${API_URL}movie/now_playing?language=en-US&page=${page}`,
         {
-          headers: {
-            Authorization: `Bearer ${API_BEARER_TOKEN}`,
-            accept: "application/json",
-          },
-        }
+          headers: API_HEADERS,
+        },
       );
 
       if (!response.ok) {
         // Handle HTTP errors (e.g., 401 Unauthorized, 404 Not Found)
         const errorData = await response.json();
         throw new Error(
-          errorData.status_message || `HTTP error! status: ${response.status}`
+          errorData.status_message || `HTTP error! status: ${response.status}`,
         );
       }
 
@@ -87,7 +89,7 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
     } finally {
       setLoadingMovies(false);
     }
-  }
+  }, []);
 
   const fetchPopularSeries = useCallback(async (page: number = 1) => {
     setLoadingSeries(true);
@@ -97,18 +99,15 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
       const response = await fetch(
         `${API_URL}trending/tv/day?language=en-US&page=${page}`,
         {
-          headers: {
-            Authorization: `Bearer ${API_BEARER_TOKEN}`,
-            accept: "application/json",
-          },
-        }
+          headers: API_HEADERS,
+        },
       );
 
       if (!response.ok) {
         // Handle HTTP errors (e.g., 401 Unauthorized, 404 Not Found)
         const errorData = await response.json();
         throw new Error(
-          errorData.status_message || `HTTP error! status: ${response.status}`
+          errorData.status_message || `HTTP error! status: ${response.status}`,
         );
       }
 
@@ -132,7 +131,7 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
   useEffect(() => {
     fetchPopularMovies(1);
     fetchPopularSeries(1);
-  }, []); // Only run on mount
+  }, [fetchPopularMovies, fetchPopularSeries]); // Only run on mount
 
   // Memoize the context value to prevent unnecessary re-renders of consumers
   const contextValue = useMemo<
@@ -168,7 +167,7 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
       fetchPopularSeries,
       series,
       hasMore,
-    ]
+    ],
   );
 
   return (
@@ -183,7 +182,7 @@ export const useMovieContext = () => {
   const context = useContext(MovieContext);
   if (context === undefined) {
     throw new Error(
-      "useMovieContext must be used within a MovieContextProvider"
+      "useMovieContext must be used within a MovieContextProvider",
     );
   }
   return context;

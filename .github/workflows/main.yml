@@ -1,0 +1,56 @@
+name: Build and Release React Native Android
+
+on:
+  # Triggers the workflow when you push a tag like "v1.0.0"
+  push:
+    tags:
+      - 'v*'
+  
+  # Allows you to trigger the build manually from the GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  build-and-release-android:
+    runs-on: ubuntu-latest
+    
+    # Required permission to create a GitHub Release
+    permissions:
+      contents: write 
+
+    steps:
+      - name: 📦 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Update to match your project
+          cache: 'npm'       # Use 'yarn' if you use yarn
+
+      - name: ☕ Set up Java (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17' # React Native 0.73+ requires Java 17
+          cache: 'gradle'
+
+      - name: 📥 Install npm dependencies
+        run: npm ci # Or 'yarn install --frozen-lockfile'
+
+      - name: 🔨 Build Android Release APK
+        working-directory: android
+        # If you need an AAB for the Play Store instead, change 'assembleRelease' to 'bundleRelease'
+        # and update the file path in the release step below.
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease
+
+      # - name: 🚀 Create GitHub Release & Upload APK
+      #   uses: softprops/action-gh-release@v2
+      #   with:
+      #     # Path to the generated APK
+      #     files: android/app/build/outputs/apk/release/app-release.apk
+      #     name: Release ${{ github.ref_name }}
+      #     draft: false
+      #     prerelease: false
+      #     generate_release_notes: true # Automatically generates a changelog based on PRs

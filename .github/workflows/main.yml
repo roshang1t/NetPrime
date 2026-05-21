@@ -45,11 +45,11 @@ jobs:
           name: app-release-apk
           path: android/app/build/outputs/apk/release/app-release.apk
 
-      # - name: 🚀 Create GitHub Release & Upload APK
-      #   uses: softprops/action-gh-release@v2
-      #   with:
-      #     files: android/app/build/outputs/apk/release/app-release.apk
-      #     name: Release ${{ github.ref_name }}
-      #     draft: false
-      #     prerelease: false
-      #     generate_release_notes: true
+      - name: 🚀 Create GitHub Release & Upload APK
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/release/app-release.apk
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true

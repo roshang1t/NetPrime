@@ -1,6 +1,6 @@
 # NetPrime ![Github Stars](https://img.shields.io/github/stars/roshang1t/NetPrime?style=social)
 
-## Download APK ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/roshang1t/NetPrime/total?link=https%3A%2F%2Fgithub.com%2Froshang1t%2FNetPrime%2Freleases&label=Github%20Downloads)
+## Download APK ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/roshang1t/NetPrime/total?link=https%3A%2F%2Fgithub.com%2Froshang1t%2FNetPrime%2Freleases&label=Github%2FDownloads)
 
 [![Download Apk](https://custom-icon-badges.demolab.com/badge/-Download_From_Github-black?style=for-the-badge&logo=download&logoColor=white)](https://github.com/roshang1t/NetPrime/releases/latest)
 

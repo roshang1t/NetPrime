@@ -1,7 +1,7 @@
 [
   {
     "id": "videasy",
-    "name": "VidEasy",
+    "name": "NetPrime",
     "urls": {
       "movie": "https://player.videasy.net/movie/${id}",
       "tv": "https://player.videasy.net/tv/${id}/${season}/${episode}"
@@ -9,13 +9,13 @@
     "allowedDomain": "https://player.videasy.net"
   },
   {
-    "id": "vidsrccc",
-    "name": "VidSrc.cc",
+    "id": "vsembed.ru",
+    "name": "VidSrc",
     "urls": {
-      "movie": "https://vidsrc.cc/embed/movie?tmdb=${id}",
+      "movie": "https://vsembed.ru/embed/movie?tmdb=${id}",
       "tv": "https://vidsrc.cc/embed/tv?tmdb=${id}&s=${season}&e=${episode}"
     },
-    "allowedDomain": "https://vidsrc.cc"
+    "allowedDomain": "https://vidsrc.ru"
   },
   {
     "id": "vidsrccc2",
@@ -30,37 +30,10 @@
     "id": "vidsrcvip2",
     "name": "Amazon",
     "urls": {
-      "movie": "https://vidsrc.vip/embed/movie/${id}",
+      "movie": "https://vsembed.su/embed/movie/${id}",
       "tv": "https://vidsrc.vip/embed/tv/${id}/${season}/${episode}"
     },
-    "allowedDomain": "https://vidsrc.vip"
-  },
-  {
-    "id": "vidsrcvip",
-    "name": "VidSrc.vip",
-    "urls": {
-      "movie": "https://vidrock.net/embed/movie/${id}",
-      "tv": "https://vidrock.net/embed/tv/${id}/${season}/${episode}"
-    },
-    "allowedDomain": "https://vidsrc.vip"
-  },
-  {
-    "id": "pstream",
-    "name": "P-Stream",
-    "urls": {
-      "movie": "https://iframe.pstream.org/embed/tmdb-movie-${id}",
-      "tv": "https://iframe.pstream.org/embed/tmdb-tv-${id}/${season}/${episode}"
-    },
-    "allowedDomain": "https://iframe.pstream.mov"
-  },
-  {
-    "id": "frembed",
-    "name": "Vidsrc.xyz",
-    "urls": {
-      "movie": "https://vidsrc.xyz/embed/movie/${id}",
-      "tv": "https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${season}&episode=${episode}"
-    },
-    "allowedDomain": "https://vidsrc.xyz"
+    "allowedDomain": "https://vsembed.su"
   },
   {
     "id": "multiembed",
@@ -69,16 +42,7 @@
       "movie": "https://multiembed.mov/?video_id=${id}&tmdb=1",
       "tv": "https://multiembed.mov/?video_id=${id}&tmdb=1&s=${season}&e=${episode}"
     },
-    "allowedDomain": "https://streamingnow.mov"
-  },
-  {
-    "id": "autoembed",
-    "name": "AutoEmbed",
-    "urls": {
-      "movie": "https://player.autoembed.cc/embed/movie/${id}",
-      "tv": "https://player.autoembed.cc/embed/tv/${id}/${season}/${episode}"
-    },
-    "allowedDomain": "https://test.autoembed.cc"
+    "allowedDomain": "https://streamingnow.mov/"
   },
   {
     "id": "vidsrcTo",

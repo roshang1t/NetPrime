@@ -3,11 +3,21 @@
     "id": "videasy",
     "name": "NetPrime",
     "urls": {
-      "movie": "https://player.videasy.to/movie/${id}",
-      "tv": "https://player.videasy.to/tv/${id}/${season}/${episode}"
+      "movie": "https://vidsrc.sh/embed/movie/${id}",
+      "tv": "https://vidsrc.sh/embed/tv/${id}/${season}/${episode}"
     },
-    "allowedDomain": "https://player.videasy.to"
+    "allowedDomain": "https://vidsrc.sh"
   },
+   {
+    "id": "vidrock",
+    "name": "NetPrime2",
+    "urls": {
+      "movie": "https://vidrock.net/movie/${id}",
+      "tv": "https://vidrock.net/tv/${id}/${season}/${episode}"
+    },
+    "allowedDomain": "https://vidrock.net"
+  },
+  
   {
     "id": "vsembed.ru",
     "name": "VidSrc",

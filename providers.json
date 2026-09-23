@@ -6,7 +6,7 @@
       "movie": "https://videasy.xyz/embed/movie/${id}",
       "tv": "https://videasy.xyz/embed/tv/${id}/${season}/${episode}"
     },
-    "allowedDomain": "https://vidsrc.sh"
+    "allowedDomain": "https://videasy.xyz"
   },
    {
     "id": "vidrock",
@@ -18,7 +18,7 @@
     "allowedDomain": "https://vidrock.net"
   },
    {
-    "id": "videasy",
+    "id": "vidsrcsh",
     "name": "Vidsrc",
     "urls": {
       "movie": "https://vidsrc.sh/embed/movie/${id}",

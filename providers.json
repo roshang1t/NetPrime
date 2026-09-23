@@ -1,13 +1,4 @@
 [
-  {
-    "id": "videasy",
-    "name": "Netprime",
-    "urls": {
-      "movie": "https://videasy.xyz/embed/movie/${id}",
-      "tv": "https://videasy.xyz/embed/tv/${id}/${season}/${episode}"
-    },
-    "allowedDomain": "https://videasy.xyz"
-  },
    {
     "id": "vidrock",
     "name": "Vidrock",
@@ -17,6 +8,16 @@
     },
     "allowedDomain": "https://vidrock.net"
   },
+  {
+    "id": "videasy",
+    "name": "Netprime",
+    "urls": {
+      "movie": "https://videasy.xyz/embed/movie/${id}",
+      "tv": "https://videasy.xyz/embed/tv/${id}/${season}/${episode}"
+    },
+    "allowedDomain": "https://videasy.xyz"
+  },
+  
    {
     "id": "vidsrcsh",
     "name": "Vidsrc",

@@ -1,9 +1,23 @@
+import { useMemo } from "react";
 import RNFS from "react-native-fs";
-import { createMMKV } from "react-native-mmkv";
+import { createMMKV, useMMKVString } from "react-native-mmkv";
+import { clearWatchedEpisodes } from "./episodes";
 
 const storage = createMMKV();
 const HISTORY_KEY = "watchHistory";
 const HISTORY_FILE = `${RNFS.DocumentDirectoryPath}/watchHistory.json`;
+// Ids removed from the Continue Watching row. History itself keeps them; watching
+// the title again brings it back to the row.
+const HIDDEN_KEY = "continueWatchingHidden";
+
+function readHidden(): string[] {
+    try {
+        const content = storage.getString(HIDDEN_KEY);
+        return content ? JSON.parse(content) : [];
+    } catch {
+        return [];
+    }
+}
 
 export async function getWatchHistory(): Promise<any[]> {
     try {
@@ -29,8 +43,49 @@ export async function getWatchHistory(): Promise<any[]> {
     }
 }
 
+/** Re-renders whenever watch history changes, e.g. for the Continue Watching row. */
+export function useWatchHistory(): any[] {
+    const [content] = useMMKVString(HISTORY_KEY, storage);
+    return useMemo(() => {
+        try {
+            return content ? JSON.parse(content) : [];
+        } catch {
+            return [];
+        }
+    }, [content]);
+}
+
+/** Watch history minus anything removed from the Continue Watching row. */
+export function useContinueWatching(): any[] {
+    const history = useWatchHistory();
+    const [hiddenContent] = useMMKVString(HIDDEN_KEY, storage);
+    return useMemo(() => {
+        let hidden: string[] = [];
+        try {
+            hidden = hiddenContent ? JSON.parse(hiddenContent) : [];
+        } catch {
+            // treat unreadable data as nothing hidden
+        }
+        const hiddenIds = new Set(hidden);
+        return history.filter((i) => !hiddenIds.has(String(i.id)));
+    }, [history, hiddenContent]);
+}
+
+export function hideFromContinueWatching(id: string | number): void {
+    const hidden = readHidden().filter((h) => h !== String(id));
+    hidden.push(String(id));
+    storage.set(HIDDEN_KEY, JSON.stringify(hidden.slice(-200)));
+}
+
 export async function addToWatchHistory(item: any): Promise<void> {
     try {
+        if (item.id !== undefined && item.id !== null) {
+            // Watching it again puts it back in Continue Watching
+            const hidden = readHidden();
+            if (hidden.includes(String(item.id))) {
+                storage.set(HIDDEN_KEY, JSON.stringify(hidden.filter((h) => h !== String(item.id))));
+            }
+        }
         const list = await getWatchHistory();
         // avoid duplicates by id if present
         const key = item.id ?? JSON.stringify(item);
@@ -44,7 +99,9 @@ export async function addToWatchHistory(item: any): Promise<void> {
 
 export async function clearWatchHistory(): Promise<void> {
     try {
-        storage.delete(HISTORY_KEY);
+        storage.remove(HISTORY_KEY);
+        storage.remove(HIDDEN_KEY);
+        clearWatchedEpisodes();
         const exists = await RNFS.exists(HISTORY_FILE);
         if (exists) await RNFS.unlink(HISTORY_FILE);
     } catch (e) {

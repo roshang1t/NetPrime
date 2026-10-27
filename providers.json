@@ -1,5 +1,5 @@
 [
-   {
+  {
     "id": "vidrock",
     "name": "Vidrock",
     "urls": {
@@ -17,8 +17,8 @@
     },
     "allowedDomain": "https://videasy.xyz"
   },
-  
-   {
+
+  {
     "id": "vidsrcsh",
     "name": "Vidsrc",
     "urls": {
@@ -27,7 +27,7 @@
     },
     "allowedDomain": "https://vidsrc.sh"
   },
-  
+
   {
     "id": "vsembed.ru",
     "name": "VidSrc 2",
@@ -39,7 +39,7 @@
   },
   {
     "id": "vidsrccc2",
-    "name": "Netflix",
+    "name": "VidSrc 3",
     "urls": {
       "movie": "https://vidsrc.cc/v2/embed/movie/${id}",
       "tv": "https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}"
@@ -48,7 +48,7 @@
   },
   {
     "id": "vidsrcvip2",
-    "name": "Amazon",
+    "name": "VidSrc Vip",
     "urls": {
       "movie": "https://vsembed.su/embed/movie/${id}",
       "tv": "https://vidsrc.vip/embed/tv/${id}/${season}/${episode}"
@@ -66,7 +66,7 @@
   },
   {
     "id": "vidsrcTo",
-    "name": "VidSrc 3",
+    "name": "VidSrc 4",
     "urls": {
       "movie": "https://vidsrc.to/embed/movie/${id}",
       "tv": "https://vidsrc.to/embed/tv/${id}/${season}/${episode}"

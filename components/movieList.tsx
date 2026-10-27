@@ -1,52 +1,17 @@
-// src/components/MovieList.tsx
+// Trending Shows row on Home
 
-import { Image } from "expo-image";
-
-import {
-  Button, // For efficient list rendering
-  Dimensions, // For pagination buttons
-  FlatList,
-  LayoutAnimation,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  UIManager,
-  useColorScheme,
-  View,
-  ScrollView,
-} from "react-native";
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
+import { ErrorState } from "@/components/ui/ErrorState";
+import { Poster, PosterRowPlaceholder } from "@/components/ui/Poster";
+import { spacing } from "@/constants/theme";
 import { useMovieContext } from "@/contexts/movieContext";
 import { Series } from "@/contexts/movieContext/types";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { createShimmerPlaceholder } from "react-native-shimmer-placeholder";
-
-const { width } = Dimensions.get("window"); // Get screen width
+import React from "react";
+import { FlatList } from "react-native";
 
 const MovieList: React.FC = React.memo(function MovieList() {
   const router = useRouter();
-  const { loadingSeries, error, currentPage, series, fetchPopularMovies } =
-    useMovieContext();
-  const colorScheme = useColorScheme();
-  const ShimmerPlaceholder = createShimmerPlaceholder(LinearGradient);
-  const [showShimmer, setShowShimmer] = useState(false);
-
-  useEffect(() => {
-    if (loadingSeries) {
-      setShowShimmer(true);
-    } else {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      const timer = setTimeout(() => setShowShimmer(false), 250);
-      return () => clearTimeout(timer);
-    }
-  }, [loadingSeries]);
+  const { loadingSeries, seriesError, series, fetchPopularSeries } = useMovieContext();
 
   const handlePress = (id: number) => {
     router.push({
@@ -55,140 +20,33 @@ const MovieList: React.FC = React.memo(function MovieList() {
     });
   };
 
-  const renderMovieItem = ({ item }: { item: Series }) => (
-    <TouchableOpacity
-      onPress={() => handlePress(item.id)}
-      style={styles.movieCard}
-    >
-      {item.poster_path ? (
-        <Image
-          source={{ uri: `https://image.tmdb.org/t/p/w200${item.poster_path}` }}
-          style={[styles.posterImage, { backgroundColor: colorScheme === "dark" ? "#1a1a1a" : "#ebebeb" }]}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          transition={600}
+  if (series.length === 0) {
+    if (seriesError && !loadingSeries) {
+      return (
+        <ErrorState
+          compact
+          error={seriesError}
+          title="Couldn't load trending shows"
+          onRetry={() => fetchPopularSeries(1)}
         />
-      ) : (
-        <View style={styles.noPoster}>
-          <Text style={styles.noPosterText}>No Image</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-
-  if (showShimmer) {
-    return (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {[1, 2, 3, 4].map((item, index) => (
-          <ShimmerPlaceholder
-            key={item}
-            shimmerColors={
-              colorScheme === "dark" ? ["#1a1a1a", "#2a2a2a", "#1a1a1a"] : ["#ebebeb", "#d3d3d3", "#ebebeb"]
-            }
-            duration={1200}
-            delay={index * 150}
-            style={{
-              height: 150,
-              width: width / 2.75 - 20,
-              borderRadius: 10,
-              marginLeft: 10,
-              marginBottom: 10,
-            }}
-          />
-        ))}
-      </ScrollView>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.centeredContainer}>
-        <Text style={styles.errorText}>Error: {error}</Text>
-        <Button title="Retry" onPress={() => fetchPopularMovies(currentPage)} />
-      </View>
-    );
+      );
+    }
+    return <PosterRowPlaceholder />;
   }
 
   return (
-    <View>
-      <FlatList
-        data={series.slice(0, 10)}
-        horizontal={true}
-        renderItem={renderMovieItem}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.flatListContent}
-        showsHorizontalScrollIndicator={false}
-      />
-    </View>
+    <FlatList
+      // First show is the hero billboard above
+      data={series.slice(1, 11)}
+      horizontal
+      renderItem={({ item }: { item: Series }) => (
+        <Poster path={item.poster_path} onPress={() => handlePress(item.id)} />
+      )}
+      keyExtractor={(item) => item.id.toString()}
+      contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md }}
+      showsHorizontalScrollIndicator={false}
+    />
   );
-});
-
-const styles = StyleSheet.create({
-  centeredContainer: {},
-  errorText: {
-    color: "red",
-    fontSize: 16,
-    marginBottom: 10,
-    textAlign: "center",
-  },
-  flatListContent: {
-    // paddingBottom: 20, // Space for pagination buttons
-  },
-  columnWrapper: {
-    // justifyContent: "space-around", // Distribute items evenly
-    width: 20,
-    // marginBottom: 15,
-  },
-  movieCard: {
-    marginLeft: 10,
-    width: width / 2.75 - 20, // Roughly half screen width minus padding
-  },
-  posterImage: {
-    width: "100%",
-    height: 150, // Fixed height for posters
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  noPoster: {
-    width: "100%",
-    height: 150,
-    backgroundColor: "#ccc",
-    borderRadius: 8,
-    marginBottom: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  noPosterText: {
-    color: "#666",
-    fontSize: 16,
-    textAlign: "center",
-  },
-  movieTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 5,
-    color: "#333",
-  },
-  movieInfo: {
-    fontSize: 13,
-    color: "#555",
-    textAlign: "center",
-  },
-  paginationContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 20,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
-  },
-  pageText: {
-    fontSize: 16,
-    marginHorizontal: 10,
-    color: "#666",
-  },
 });
 
 export default MovieList;

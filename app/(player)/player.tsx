@@ -1,22 +1,28 @@
+import { getNextEpisode, markEpisodeWatched, NextEpisode } from "@/utils/episodes";
 import { addToWatchHistory } from "@/utils/history";
+import { ThemedText } from "@/components/ThemedText";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { IconButton } from "@/components/ui/IconButton";
+import { Colors, radius, spacing, useTheme } from "@/constants/theme";
+import { fetchJson } from "@/utils/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useKeepAwake } from "expo-keep-awake";
-import { useGlobalSearchParams, useNavigation } from "expo-router";
+import { useGlobalSearchParams, useNavigation, useRouter } from "expo-router";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
+  ScrollView,
   StyleSheet,
-  Text,
-  TouchableOpacity,
-  useColorScheme,
   View,
 } from "react-native";
-import { FlatList } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import WebView from "react-native-webview";
-import { Colors } from "react-native/Libraries/NewAppScreen"; // Make sure Colors is correctly imported or defined
+
+// The player is always dark, whatever the system theme
+const dark = Colors.dark;
 
 const GITHUB_RAW_JSON_URL =
   "https://raw.githubusercontent.com/roshang1t/NetPrime/refs/heads/master/providers.json";
@@ -54,11 +60,11 @@ export const Player: React.FC = () => {
   ); // State to hold the currently selected provider
   const [loading, setLoading] = useState(true); // Added loading state for initial fetch
   const [error, setError] = useState<unknown>(null); // Explicitly setting to null
-
-  const colorScheme = useColorScheme();
-  const color = Colors[colorScheme ?? "dark"]; // Ensure Colors is properly defined/imported
+  const [nextEpisode, setNextEpisode] = useState<NextEpisode | null>(null);
 
   const navigation = useNavigation();
+  const router = useRouter();
+  const theme = useTheme();
 
   useEffect(() => {
     if (id) {
@@ -70,30 +76,52 @@ export const Player: React.FC = () => {
         episode: ep,
         poster_path,
       });
-    }
-
-    const fetchEmbedProviders = async () => {
-      try {
-        const response = await fetch(GITHUB_RAW_JSON_URL);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data: Provider[] = await response.json();
-        setProviders(data);
-
-        if (data.length > 0) {
-          setSelectedProvider(data[0]); // Set the first provider as selected by default
-        }
-      } catch (e) {
-        setError(e);
-        console.error("Failed to fetch embed providers:", e);
-      } finally {
-        setLoading(false); // Set loading to false once fetch is complete (success or error)
+      if (type === "tv" && season && ep) {
+        markEpisodeWatched(id, Number(season), Number(ep));
       }
-    };
-
-    fetchEmbedProviders();
+    }
   }, [id, title, type, season, ep, poster_path]);
+
+  // Look up the episode after this one, if it has aired
+  useEffect(() => {
+    setNextEpisode(null);
+    if (type !== "tv" || !id || !season || !ep) return;
+    let active = true;
+    getNextEpisode(id, Number(season), Number(ep)).then((next) => {
+      if (active) setNextEpisode(next);
+    });
+    return () => {
+      active = false;
+    };
+  }, [id, type, season, ep]);
+
+  // Same screen, new params: the WebView reloads and the chosen provider is kept
+  const playNextEpisode = () => {
+    if (!nextEpisode) return;
+    router.setParams({
+      season: String(nextEpisode.season),
+      ep: String(nextEpisode.episode),
+    });
+  };
+
+  const fetchEmbedProviders = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchJson<Provider[]>(GITHUB_RAW_JSON_URL);
+      setProviders(data);
+      // Keep the current server on retry; otherwise default to the first
+      setSelectedProvider((current) => data.find((p) => p.id === current?.id) ?? data[0] ?? null);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setLoading(false); // Set loading to false once fetch is complete (success or error)
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchEmbedProviders();
+  }, [fetchEmbedProviders]);
 
   useEffect(() => {
     navigation.setOptions({ headerShown: false, animation: "fade" });
@@ -139,7 +167,7 @@ export const Player: React.FC = () => {
   }: {
     nativeEvent: { targetUrl: string };
   }) => {
-    console.log("WebView tried to open new window:", nativeEvent.targetUrl);
+    if (__DEV__) console.log("WebView tried to open new window:", nativeEvent.targetUrl);
     return false;
   };
 
@@ -158,8 +186,8 @@ export const Player: React.FC = () => {
       ) {
         ScreenOrientation.unlockAsync();
       }
-    } catch (e) {
-      console.error("Error parsing WebView message:", e);
+    } catch {
+      // Embedded players post their own non-JSON messages; only ours matter
     }
   };
 
@@ -194,15 +222,11 @@ export const Player: React.FC = () => {
   // Render loading state
   if (loading) {
     return (
-      <View
-        style={[
-          styles.container,
-          styles.centerContent,
-          { backgroundColor: "#000" },
-        ]}
-      >
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={styles.loadingText}>Loading providers...</Text>
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color={dark.text} />
+        <ThemedText variant="callout" style={{ color: dark.textSecondary, marginTop: spacing.md }}>
+          Loading servers…
+        </ThemedText>
       </View>
     );
   }
@@ -210,52 +234,55 @@ export const Player: React.FC = () => {
   // Render error state
   if (error) {
     return (
-      <View
-        style={[
-          styles.container,
-          styles.centerContent,
-          { backgroundColor: "#000" },
-        ]}
-      >
-        <Text style={styles.errorText}>Error loading providers:</Text>
-        <Text style={styles.errorText}>
-          {error instanceof Error ? error.message : String(error)}
-        </Text>
-        <TouchableOpacity onPress={() => setLoading(true)}>
-          {" "}
-          {/* Allow retry */}
-          <Text style={styles.retryText}>Tap to Retry</Text>
-        </TouchableOpacity>
+      // Follows the app theme (ErrorState does); no video is showing yet
+      <View style={[styles.container, styles.centerContent, { backgroundColor: theme.background }]}>
+        <ErrorState
+          error={error}
+          title="Couldn't load servers"
+          onRetry={fetchEmbedProviders}
+          onBack={() => router.back()}
+        />
       </View>
     );
   }
 
+  const subtitle =
+    type === "tv" && season && ep ? `Season ${season} · Episode ${ep}` : undefined;
+
   return (
     <>
       <StatusBar style={"light"} translucent />
-      <SafeAreaView style={[styles.container, { backgroundColor: "#000" }]}>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.topBar}>
+          <IconButton
+            icon="arrow-back"
+            color={dark.text}
+            onPress={() => router.back()}
+            accessibilityLabel="Back"
+          />
+          <View style={{ flex: 1 }}>
+            <ThemedText variant="headline" numberOfLines={1} style={{ color: dark.text }}>
+              {title || (type === "tv" ? "Episode" : "Movie")}
+            </ThemedText>
+            {subtitle ? (
+              <ThemedText variant="caption" style={{ color: dark.textSecondary }}>
+                {subtitle}
+              </ThemedText>
+            ) : null}
+          </View>
+        </View>
+
         <WebView
           key={selectedProvider?.id || "default"} // Key changes to force WebView re-render when provider changes
-          style={[
-            styles.webview,
-            {
-              backgroundColor: "#000",
-            },
-          ]}
+          style={styles.webview}
           javaScriptEnabled={true}
           allowsFullscreenVideo={true}
           injectedJavaScriptBeforeContentLoaded=""
           overScrollMode="never"
           startInLoadingState={true}
           renderLoading={() => (
-            <View
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <ActivityIndicator size="large" color="#007bff" />
+            <View style={[StyleSheet.absoluteFill, styles.centerContent]}>
+              <ActivityIndicator size="large" color={dark.text} />
             </View>
           )}
           source={{ uri: getWebViewUrl() }} // Dynamic URL from getWebViewUrl
@@ -279,48 +306,63 @@ export const Player: React.FC = () => {
           `}
         />
 
-        <View style={styles.providerListSection}>
-          <Text style={styles.infoText}>
-            Please select another provider if getting an error in the current
-            one.{"\n"}or select diffrent server in player
-          </Text>
+        <View style={styles.panel}>
+          <View style={styles.panelHeader}>
+            <ThemedText variant="overline" style={{ color: dark.textTertiary }}>
+              Servers
+            </ThemedText>
+            {nextEpisode && (
+              <Pressable
+                onPress={playNextEpisode}
+                accessibilityRole="button"
+                accessibilityLabel={`Play next episode, season ${nextEpisode.season} episode ${nextEpisode.episode}`}
+                style={({ pressed }) => [styles.nextButton, { opacity: pressed ? 0.75 : 1 }]}
+              >
+                <ThemedText variant="callout" style={{ color: dark.onAccent }}>
+                  Next · S{nextEpisode.season} E{nextEpisode.episode}
+                </ThemedText>
+                <Ionicons name="play-skip-forward" size={14} color={dark.onAccent} />
+              </Pressable>
+            )}
+          </View>
 
-          <FlatList
+          <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.flatListContentContainer}
-            data={providers}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                onPress={() => {
-                  setSelectedProvider(item); // Set the selected provider on press
-                }}
-                style={[
-                  styles.providerItem,
-                  selectedProvider?.id === item.id &&
-                    styles.providerItemSelected, // Apply selected style
-                ]}
-              >
-                <Ionicons
-                  name="play"
-                  color={
-                    selectedProvider?.id === item.id ? Colors.white : color.text
-                  }
-                  size={20}
-                />
-                <Text
-                  style={[
-                    styles.providerName,
-                    selectedProvider?.id === item.id &&
-                      styles.providerNameSelected, // Apply selected text style
+            contentContainerStyle={styles.serverList}
+          >
+            {providers.map((item) => {
+              const isSelected = selectedProvider?.id === item.id;
+              return (
+                <Pressable
+                  key={item.id}
+                  onPress={() => {
+                    setSelectedProvider(item); // Set the selected provider on press
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  style={({ pressed }) => [
+                    styles.serverChip,
+                    {
+                      backgroundColor: isSelected ? dark.accent : dark.surfaceRaised,
+                      opacity: pressed ? 0.75 : 1,
+                    },
                   ]}
                 >
-                  {item.name}
-                </Text>
-              </TouchableOpacity>
-            )}
-          />
+                  <ThemedText
+                    variant="callout"
+                    style={{ color: isSelected ? dark.onAccent : dark.text }}
+                  >
+                    {item.name}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          <ThemedText variant="caption" style={styles.hint}>
+            Not playing? Try another server here, or switch servers inside the player.
+          </ThemedText>
         </View>
       </SafeAreaView>
     </>
@@ -330,81 +372,58 @@ export const Player: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: dark.background,
   },
   centerContent: {
-    flex: 1, // Ensure it takes full space for centering
     justifyContent: "center",
     alignItems: "center",
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   webview: {
     flex: 1, // WebView takes up remaining space
+    backgroundColor: dark.background,
   },
-  providerListSection: {
-    height: "15%", // Adjusted height slightly for better visual balance, or set to a fixed number like 180
-    backgroundColor: Colors.background, // Use Colors.background for consistency
-    paddingVertical: 10,
-    borderTopWidth: StyleSheet.hairlineWidth, // Small line to separate from WebView
-    borderTopColor: "#fff",
-    // borderTopLeftRadius: 0,
+  panel: {
+    // Sized by content so the Next Episode button fits
+    backgroundColor: dark.surface,
+    paddingVertical: spacing.md,
+    gap: spacing.md,
   },
-  infoText: {
-    color: "#fff", // Orange color for warning
-
-    fontWeight: "400", // Slightly bolder than 200
-    fontSize: 10, // Slightly larger
-    textAlign: "center",
-    fontStyle: "italic",
-    marginBottom: 5,
-  },
-  flatListContentContainer: {
-    alignItems: "center",
-    paddingHorizontal: 10,
-  },
-  providerItem: {
-    backgroundColor: "#333", // Use Colors.card or a light color from Colors
-    borderRadius: 15,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+  panelHeader: {
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
-    gap: 8, // Increased gap for better spacing between icon and text
-    marginHorizontal: 5, // Spacing between items
-    // Min width and height for consistent button size
-    minWidth: 120,
-    height: 50,
-    elevation: 3,
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    minHeight: 32,
   },
-  providerItemSelected: {
-    backgroundColor: "#0a7ea4", // Blue background for selected item
-    borderColor: "#0a7ea4",
-    borderWidth: 2, // Thicker border for selected
-    fontWeight: "bold",
+  nextButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    height: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+    backgroundColor: dark.accent,
   },
-  providerName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.text, // Use Colors.text for dynamic color
+  serverList: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
   },
-  providerNameSelected: {
-    color: Colors.white, // White text for selected item
+  serverChip: {
+    height: 36,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.full,
+    justifyContent: "center",
   },
-  loadingText: {
-    color: Colors.text,
-    marginTop: 10,
-    fontSize: 16,
-  },
-  errorText: {
-    color: Colors.error, // Assuming Colors.error exists or define 'red'
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-  },
-  retryText: {
-    color: "#007bff", // Blue for retry text
-    fontSize: 16,
-    marginTop: 10,
-    textDecorationLine: "underline",
+  hint: {
+    color: dark.textTertiary,
+    paddingHorizontal: spacing.lg,
   },
 });
 

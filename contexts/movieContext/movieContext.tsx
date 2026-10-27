@@ -6,21 +6,13 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { tmdbGet } from "@/utils/api";
+import { prefetchPosters, withPoster } from "@/utils/images";
+import { useRegion } from "@/utils/region";
 import { Movie, MovieContextType, Series } from "./types";
 
-// TMDb API Configuration
-export const API_URL = "https://netstream.dhamiroshan730.workers.dev/";
-
-export const API_BEARER_TOKEN =
-  "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhZjZkZDVhOWQwZjgzYmQ4M2QxZjIxNmQ2N2RlYWNmMyIsIm5iZiI6MTcxNTUxOTIyNy4wMTIsInN1YiI6IjY2NDBiZWZiMThhZDFlNzU4ODIwN2VmMyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZPlxXSMmTnIvs-nuuwalmPbtPXW383jBxiAheNnAKWA";
-
-export const API_HEADERS = {
-  Authorization: `Bearer ${API_BEARER_TOKEN}`,
-  accept: "application/json",
-  "Accept-Encoding": "identity",
-  "Cache-Control": "no-cache",
-  Pragma: "no-cache",
-};
+// API constants live in utils/api; re-exported here for existing imports
+export { API_BEARER_TOKEN, API_HEADERS, API_URL } from "@/utils/api";
 
 // Default context value for initial creation and for cases where it's used outside a Provider.
 // Ensure all properties from MovieContextType are present.
@@ -30,6 +22,41 @@ interface MovieContextProviderProps {
   children: React.ReactNode;
 }
 
+interface Page<T> {
+  page: number;
+  results: T[];
+  total_pages: number;
+  total_results: number;
+}
+
+// Append a page, skipping ids already in the list
+function mergePage<T extends { id: number }>(prev: T[], next: T[]): T[] {
+  return [...prev, ...next.filter((n) => !prev.some((p) => p.id === n.id))];
+}
+
+// Pages to skip past at most when every result on one lacks artwork
+const MAX_EMPTY_PAGES = 3;
+
+/**
+ * Fetch a page keeping only titles with a poster. If a whole page is filtered
+ * out, move on to the next one: the list wouldn't grow, so FlatList would never
+ * fire onEndReached again and infinite scroll would stall.
+ */
+async function fetchUsablePage<T extends { poster_path?: string | null; adult?: boolean }>(
+  pathForPage: (page: number) => string,
+  page: number,
+): Promise<{ data: Page<T>; results: T[] }> {
+  let data = await tmdbGet<Page<T>>(pathForPage(page));
+  let results = withPoster(data.results);
+  for (let skipped = 0; results.length === 0 && data.page < data.total_pages && skipped < MAX_EMPTY_PAGES; skipped++) {
+    data = await tmdbGet<Page<T>>(pathForPage(data.page + 1));
+    results = withPoster(data.results);
+  }
+  // Warm the image cache so posters are ready before they scroll into view
+  prefetchPosters(results);
+  return { data, results };
+}
+
 export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
   children,
 }) => {
@@ -37,7 +64,8 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
   const [series, setSeries] = useState<Series[]>([]);
   const [loadingMovies, setLoadingMovies] = useState<boolean>(true);
   const [loadingSeries, setLoadingSeries] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [moviesError, setMoviesError] = useState<unknown>(null);
+  const [seriesError, setSeriesError] = useState<unknown>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalResults, setTotalResults] = useState<number>(0);
@@ -47,128 +75,72 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
   const [seriesTotalPages, setSeriesTotalPages] = useState<number>(1);
   const [seriesTotalResults, setSeriesTotalResults] = useState<number>(0);
   const [seriesHasMore, setSeriesHasMore] = useState<boolean>(true);
+  const region = useRegion();
 
-  // Remove useCallback, make fetchPopularMovies a regular function
   const fetchPopularMovies = useCallback(async (page: number = 1) => {
-    // if (loadingMovies) return; // Prevent multiple fetches
     setLoadingMovies(true);
-    setError(null); // Clear previous errors
+    setMoviesError(null);
 
     try {
-      const response = await fetch(
-        `${API_URL}movie/now_playing?language=en-US&page=${page}`,
-        {
-          headers: API_HEADERS,
-        },
+      // region: only movies currently in theatres in the user's country
+      const { data, results } = await fetchUsablePage<Movie>(
+        (p) => `movie/now_playing?language=en-US&region=${region}&page=${p}`,
+        page,
       );
-
-      if (!response.ok) {
-        // Handle HTTP errors (e.g., 401 Unauthorized, 404 Not Found)
-        const errorData = await response.json();
-        throw new Error(
-          errorData.status_message || `HTTP error! status: ${response.status}`,
-        );
-      }
-
-      const data = await response.json();
-
-      if (page === 1) {
-        setMovies(data.results);
-      } else {
-        setMovies((prev) => {
-          const newItems = data.results.filter(
-            (newItem: Movie) => !prev.some((prevItem) => prevItem.id === newItem.id)
-          );
-          return [...prev, ...newItems];
-        });
-      }
-      setLoadingMovies(false);
+      setMovies((prev) => (page === 1 ? results : mergePage(prev, results)));
       setCurrentPage(data.page);
       setTotalPages(data.total_pages);
       setTotalResults(data.total_results);
       setHasMore(data.page < data.total_pages);
     } catch (err) {
-      console.error("Failed to fetch movies:", err);
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unknown error occurred.");
-      }
-      setMovies([]); // Clear movies on error
-      setHasMore(false);
+      setMoviesError(err);
+      // A failed first page means a new region or a fresh start: drop stale items
+      if (page === 1) setMovies([]);
     } finally {
       setLoadingMovies(false);
     }
-  }, []);
+  }, [region]);
 
   const fetchPopularSeries = useCallback(async (page: number = 1) => {
     setLoadingSeries(true);
-    setError(null); // Clear previous errors
+    setSeriesError(null);
 
     try {
-      const response = await fetch(
-        `${API_URL}trending/tv/day?language=en-US&page=${page}`,
-        {
-          headers: API_HEADERS,
-        },
+      const { data, results } = await fetchUsablePage<Series>(
+        (p) => `trending/tv/day?language=en-US&page=${p}`,
+        page,
       );
-
-      if (!response.ok) {
-        // Handle HTTP errors (e.g., 401 Unauthorized, 404 Not Found)
-        const errorData = await response.json();
-        throw new Error(
-          errorData.status_message || `HTTP error! status: ${response.status}`,
-        );
-      }
-
-      const data = await response.json();
-      if (page === 1) {
-        setSeries(data.results);
-      } else {
-        setSeries((prev) => {
-          const newItems = data.results.filter(
-            (newItem: Series) => !prev.some((prevItem) => prevItem.id === newItem.id)
-          );
-          return [...prev, ...newItems];
-        });
-      }
+      setSeries((prev) => (page === 1 ? results : mergePage(prev, results)));
       setSeriesCurrentPage(data.page);
       setSeriesTotalPages(data.total_pages);
       setSeriesTotalResults(data.total_results);
       setSeriesHasMore(data.page < data.total_pages);
     } catch (err) {
-      console.error("Failed to fetch series:", err);
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unknown error occurred.");
-      }
-      setSeries([]); // Clear movies on error
+      setSeriesError(err);
+      if (page === 1) setSeries([]);
     } finally {
       setLoadingSeries(false);
     }
   }, []);
 
-  // Fetch movies on initial component mount
+  // Fetch on mount; Now Playing again whenever the region changes
   useEffect(() => {
     fetchPopularMovies(1);
+  }, [fetchPopularMovies]);
+
+  useEffect(() => {
     fetchPopularSeries(1);
-  }, [fetchPopularMovies, fetchPopularSeries]); // Only run on mount
+  }, [fetchPopularSeries]);
 
   // Memoize the context value to prevent unnecessary re-renders of consumers
-  const contextValue = useMemo<
-    MovieContextType & {
-      hasMore: boolean;
-      loadingMovies: boolean;
-      loadingSeries: boolean;
-    }
-  >(
+  const contextValue = useMemo<MovieContextType>(
     () => ({
       movies,
       loading: loadingMovies || loadingSeries,
       loadingMovies,
       loadingSeries,
-      error,
+      moviesError,
+      seriesError,
       currentPage,
       totalPages,
       totalResults,
@@ -185,7 +157,8 @@ export const MovieContextProvider: React.FC<MovieContextProviderProps> = ({
       movies,
       loadingMovies,
       loadingSeries,
-      error,
+      moviesError,
+      seriesError,
       currentPage,
       totalPages,
       totalResults,

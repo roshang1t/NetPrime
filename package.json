@@ -44,7 +44,8 @@
     "react-native-screens": "~4.11.1",
     "react-native-shimmer-placeholder": "^2.0.9",
     "react-native-web": "~0.20.0",
-    "react-native-webview": "13.13.5"
+    "react-native-webview": "13.13.5",
+    "expo-secure-store": "~14.2.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

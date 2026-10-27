@@ -1,32 +1,18 @@
-import { Image } from "expo-image";
-import React, { useEffect, useRef, useState } from "react";
-import {
-  Button, // For efficient list rendering
-  Dimensions,
-  FlatList,
-  LayoutAnimation,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  UIManager,
-  useColorScheme,
-  View,
-} from "react-native";
+// Now Playing grid on Home (infinite scroll); the rest of Home renders in its header
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
-import { Colors } from "@/constants/Colors";
+import { ThemedText } from "@/components/ThemedText";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { Poster, PosterGridPlaceholder } from "@/components/ui/Poster";
+import { radius, spacing, useTheme } from "@/constants/theme";
 import { Movie, useMovieContext } from "@/contexts/movieContext";
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { createShimmerPlaceholder } from "react-native-shimmer-placeholder";
+import React, { useRef, useState } from "react";
+import { Dimensions, FlatList, Pressable } from "react-native";
 
-const { width } = Dimensions.get("window"); // Get screen width
+const { width } = Dimensions.get("window");
+export const GRID_COLUMNS = 3;
+export const GRID_POSTER_WIDTH = (width - spacing.lg * 2 - spacing.md * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
 
 interface PopularListProps {
   ListHeaderComponent?: React.ReactElement | null;
@@ -36,81 +22,17 @@ const PopularList: React.FC<PopularListProps> = ({ ListHeaderComponent }) => {
   const {
     movies,
     loadingMovies,
-    error,
+    moviesError,
     currentPage,
     totalPages,
     fetchPopularMovies,
     hasMore,
   } = useMovieContext();
 
-  const colorScheme = useColorScheme();
-  const color = Colors[colorScheme ?? "dark"];
-  const ShimmerPlaceholder = createShimmerPlaceholder(LinearGradient);
-
+  const theme = useTheme();
   const router = useRouter();
-
   const flatListRef = useRef<FlatList>(null);
-  const [showShimmer, setShowShimmer] = useState(false);
   const [showGoToTop, setShowGoToTop] = useState(false);
-
-  useEffect(() => {
-    if (loadingMovies && movies.length === 0) {
-      setShowShimmer(true);
-    } else if (!loadingMovies) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      const timer = setTimeout(() => setShowShimmer(false), 250);
-      return () => clearTimeout(timer);
-    }
-  }, [loadingMovies, movies.length]);
-
-  const ShimmerGrid = () => (
-    <View style={{ width: "100%" }}>
-      {[1, 2].map((row) => (
-        <View key={row} style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
-          {[1, 2].map((col) => (
-            <ShimmerPlaceholder
-              key={`${row}-${col}`}
-              shimmerColors={
-                colorScheme === "dark" ? ["#1a1a1a", "#2a2a2a", "#1a1a1a"] : ["#ebebeb", "#d3d3d3", "#ebebeb"]
-              }
-              style={{
-                height: 250,
-                width: (width - 30) / 2,
-                borderRadius: 20,
-              }}
-              visible={!showShimmer}
-              duration={1200}
-              delay={(row * 2 + col) * 150}
-              shimmerStyle={{
-                opacity: showShimmer ? 1 : 0,
-                transition: "opacity 0.3s",
-              }}
-            />
-          ))}
-        </View>
-      ))}
-    </View>
-  );
-
-  if (showShimmer || (loadingMovies && movies.length === 0)) {
-    return (
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        {ListHeaderComponent}
-        <ShimmerGrid />
-      </ScrollView>
-    );
-  }
-
-  if (error && movies.length === 0) {
-    return (
-      <View style={styles.centeredContainer}>
-        <Text style={styles.errorText}>
-          Error: {error} please change you dns
-        </Text>
-        <Button title="Retry" onPress={() => fetchPopularMovies(currentPage)} />
-      </View>
-    );
-  }
 
   const handlePress = (id: number) => {
     router.push({
@@ -118,179 +40,87 @@ const PopularList: React.FC<PopularListProps> = ({ ListHeaderComponent }) => {
       params: { id: id.toString(), type: "movie" },
     });
   };
-  const renderItem = ({ item }: { item: Movie }) => (
-    <TouchableOpacity
-      style={styles.movieCard}
-      onPress={() => handlePress(item.id)}
-    >
-      {item.poster_path ? (
-        <Image
-          source={{ uri: `https://image.tmdb.org/t/p/w200${item.poster_path}` }}
-          style={[styles.posterImage, { backgroundColor: colorScheme === "dark" ? "#1a1a1a" : "#ebebeb" }]}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          transition={600}
-        />
-      ) : (
-        <View style={styles.noPoster}>
-          <Text style={styles.noPosterText}>No Image</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
 
   const handleEndReached = () => {
-    if (!loadingMovies && hasMore && currentPage < totalPages) {
+    // After a failed page, wait for the user to tap Retry instead of re-firing on scroll
+    if (!loadingMovies && !moviesError && hasMore && currentPage < totalPages) {
       fetchPopularMovies(currentPage + 1);
     }
   };
 
-  const scrollToTop = () => {
-    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-  };
+  const emptyContent =
+    loadingMovies ? (
+      <PosterGridPlaceholder width={GRID_POSTER_WIDTH} columns={GRID_COLUMNS} />
+    ) : moviesError ? (
+      <ErrorState
+        compact
+        error={moviesError}
+        title="Couldn't load Now Playing"
+        onRetry={() => fetchPopularMovies(1)}
+      />
+    ) : (
+      <ThemedText variant="callout" tone="secondary" style={{ paddingHorizontal: spacing.lg }}>
+        Nothing playing in theatres here right now.
+      </ThemedText>
+    );
+
+  const footer =
+    movies.length === 0 ? null : loadingMovies ? (
+      <PosterGridPlaceholder width={GRID_POSTER_WIDTH} columns={GRID_COLUMNS} rows={1} />
+    ) : moviesError ? (
+      <ErrorState
+        compact
+        error={moviesError}
+        title="Couldn't load more"
+        onRetry={() => fetchPopularMovies(currentPage + 1)}
+      />
+    ) : null;
 
   return (
     <>
       <FlatList
         ref={flatListRef}
-        onScroll={(e) => {
-          const offsetY = e.nativeEvent.contentOffset.y;
-          setShowGoToTop(offsetY > 400);
-        }}
+        onScroll={(e) => setShowGoToTop(e.nativeEvent.contentOffset.y > 800)}
         scrollEventThrottle={16}
         ListHeaderComponent={ListHeaderComponent}
         showsVerticalScrollIndicator={false}
         data={movies}
-        renderItem={renderItem}
+        renderItem={({ item }: { item: Movie }) => (
+          <Poster path={item.poster_path} width={GRID_POSTER_WIDTH} onPress={() => handlePress(item.id)} />
+        )}
         keyExtractor={(item) => item.id.toString()}
-        numColumns={2}
-        contentContainerStyle={styles.container}
-        columnWrapperStyle={styles.columnWrapper}
+        numColumns={GRID_COLUMNS}
+        columnWrapperStyle={{ gap: spacing.md, paddingHorizontal: spacing.lg }}
+        contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.xxl }}
         onEndReached={handleEndReached}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          loadingMovies ? (
-            <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 16 }}>
-              <ShimmerPlaceholder
-                shimmerColors={
-                  colorScheme === "dark" ? ["#1a1a1a", "#2a2a2a", "#1a1a1a"] : ["#ebebeb", "#d3d3d3", "#ebebeb"]
-                }
-                duration={1200}
-                style={{
-                  height: 250,
-                  width: (width - 30) / 2,
-                  borderRadius: 8
-                }}
-              />
-              <ShimmerPlaceholder
-                shimmerColors={
-                  colorScheme === "dark" ? ["#1a1a1a", "#2a2a2a", "#1a1a1a"] : ["#ebebeb", "#d3d3d3", "#ebebeb"]
-                }
-                duration={1200}
-                delay={150}
-                style={{
-                  height: 250,
-                  width: (width - 30) / 2,
-                  borderRadius: 20,
-                }}
-              />
-            </View>
-          ) : null
-        }
-        ItemSeparatorComponent={() => <View style={{ height: 16 }} />} // 16px vertical space between rows
+        // Start the next page ~2 screens early so scrolling never hits the end
+        onEndReachedThreshold={2}
+        ListEmptyComponent={emptyContent}
+        ListFooterComponent={footer}
       />
       {showGoToTop && (
-        <TouchableOpacity
-          style={[styles.fabContainer, { backgroundColor: color.tint }]}
-          onPress={scrollToTop}
-          activeOpacity={0.8}
+        <Pressable
+          onPress={() => flatListRef.current?.scrollToOffset({ offset: 0, animated: true })}
+          accessibilityRole="button"
+          accessibilityLabel="Scroll to top"
+          style={({ pressed }) => ({
+            position: "absolute",
+            right: spacing.lg,
+            bottom: spacing.lg,
+            width: 44,
+            height: 44,
+            borderRadius: radius.full,
+            backgroundColor: theme.accent,
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: pressed ? 0.75 : 1,
+          })}
         >
-          <View style={styles.fabInner}>
-            <Ionicons name="arrow-up" size={20} color={color.background} />
-            <Text style={[styles.fabText, { color: color.background }]}>Top</Text>
-          </View>
-        </TouchableOpacity>
+          <MaterialIcons name="arrow-upward" size={22} color={theme.onAccent} />
+        </Pressable>
       )}
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 10,
-  },
-  columnWrapper: {
-    justifyContent: "space-between",
-  },
-  centeredContainer: {
-    // flex: 1,
-    // justifyContent: "center",
-    // alignItems: "center",
-  },
-  errorText: {
-    color: "red",
-    fontSize: 16,
-    marginBottom: 10,
-    textAlign: "center",
-  },
-
-  movieCard: {
-    width: (width - 30) / 2,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  posterImage: {
-    width: "100%",
-    height: 250, // Fixed height for posters
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 10, height: 10 },
-    // marginBottom: 30,
-  },
-  noPoster: {
-    width: "100%",
-    height: 250,
-    backgroundColor: "#ccc",
-    // borderRadius: 8,
-    marginBottom: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  noPosterText: {
-    color: "#666",
-    fontSize: 16,
-    textAlign: "center",
-  },
-  pageText: {
-    fontSize: 16,
-    marginHorizontal: 10,
-    color: "#666",
-  },
-  fabContainer: {
-    position: "absolute",
-    bottom: 25,
-    alignSelf: "center",
-    zIndex: 1000,
-    borderRadius: 30,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  fabInner: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  fabText: {
-    fontSize: 15,
-    fontWeight: "bold",
-    letterSpacing: 0.5,
-  },
-});
 
 export default React.memo(PopularList);

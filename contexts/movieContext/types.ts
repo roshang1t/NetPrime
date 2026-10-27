@@ -38,7 +38,10 @@ export interface Series {
 export interface MovieContextState {
     movies: Movie[];
     loading: boolean;
-    error: string | null;
+    // Last failure for each list (pass to describeError for display). A failed
+    // later page keeps the items already loaded.
+    moviesError: unknown;
+    seriesError: unknown;
     currentPage: number;
     totalPages: number;
     totalResults: number;

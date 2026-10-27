@@ -1,3 +1,8 @@
+// The app's GitHub repo: release checks and the "Star" / "View on GitHub" links
+export const GITHUB_OWNER = "roshang1t";
+export const GITHUB_REPO = "NetPrime";
+export const GITHUB_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`;
+
 export async function checkGithubRelease(
     owner: string,
     repo: string,
@@ -34,4 +39,18 @@ export async function checkGithubRelease(
     } catch {
         return { isNewer: false };
     }
+}
+
+/** GitHub release notes are Markdown; strip the syntax so they read well as plain text. */
+export function formatReleaseNotes(body?: string, maxLength = 1200): string {
+    if (!body) return "";
+    const text = body
+        .replace(/\r/g, "")
+        .replace(/^#+\s*/gm, "")
+        .replace(/^\s*[-*]\s+/gm, "• ")
+        .replace(/\*\*|__|`/g, "")
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    return text.length > maxLength ? `${text.slice(0, maxLength).trimEnd()}…` : text;
 }

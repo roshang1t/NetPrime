@@ -1,81 +1,70 @@
-// app/index.tsx (if using Expo Router and _layout.tsx)
-
-import MovieList from "@/components/movieList"; // Adjust path based on your structure
+import {
+  ContinueWatchingRow,
+  HomeHero,
+  HomeTopBar,
+  MyListRow,
+  TmdbRow,
+} from "@/components/homeRows";
+import MovieList from "@/components/movieList";
 import PopularList from "@/components/popularList";
-import { Colors } from "@/constants/Colors";
-import { useNavigation } from "expo-router";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { useTheme } from "@/constants/theme";
+import { useCountryName } from "@/utils/countries";
+import { useRegion } from "@/utils/region";
+import { useNavigation, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-
-import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
-import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from "react-native";
-// import { ScrollView } from "react-native-gesture-handler";
-
-import { Ionicons } from "@expo/vector-icons";
+import { useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default React.memo(function HomePage() {
   const colorScheme = useColorScheme();
-  const color = Colors[colorScheme ?? "dark"];
+  const theme = useTheme();
   const navigation = useNavigation();
   const router = useRouter();
+  const region = useRegion();
+  const countryName = useCountryName(region);
+  // Regional "popular" rows only include titles already out
+  const today = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
-  // Simulate loading for shimmer demo (replace with real loading logic)
-
   return (
-    <SafeAreaView
-      edges={['top']}
-      style={{
-        backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
-        flex: 1,
-      }}
-    >
-      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+    <SafeAreaView edges={["top"]} style={{ backgroundColor: theme.background, flex: 1 }}>
+      <StatusBar style={colorScheme === "light" ? "dark" : "light"} />
       <PopularList
-
         ListHeaderComponent={
           <>
-            <View style={styles.headerRow}>
-              <Text style={[styles.title, { color: color.text }]}>Trending Shows</Text>
-              <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 5 }} onPress={() => router.push("/trendingShows")}>
-                <Text style={[styles.seeAll, { color: color.tabIconDefault }]}>See All</Text>
-                <Ionicons name="arrow-forward" size={18} color={color.tabIconDefault} />
-              </TouchableOpacity>
-            </View>
+            <HomeTopBar />
+            <HomeHero />
+            <ContinueWatchingRow />
+            <MyListRow />
+            <SectionHeader title="Trending Shows" onSeeAll={() => router.push("/trendingShows")} />
             <MovieList />
-            <Text style={[styles.title, { color: color.text, paddingHorizontal: 20, marginBottom: 15 }]}>Now Playing</Text>
+            {/* TMDB's trending endpoints are worldwide only, so regional rows use
+                titles made in the country, sorted by popularity. The vote floor
+                keeps out obscure titles with no ratings. */}
+            <TmdbRow
+              title={`Top Shows from ${countryName}`}
+              type="tv"
+              path={`discover/tv?language=en-US&sort_by=popularity.desc&with_origin_country=${region}&first_air_date.lte=${today}&vote_count.gte=10`}
+            />
+            <TmdbRow
+              title={`Top Movies from ${countryName}`}
+              type="movie"
+              path={`discover/movie?language=en-US&sort_by=popularity.desc&with_origin_country=${region}&primary_release_date.lte=${today}&vote_count.gte=20`}
+            />
+            <TmdbRow
+              title={`Coming Soon in ${countryName}`}
+              type="movie"
+              path={`movie/upcoming?language=en-US&region=${region}`}
+            />
+            <SectionHeader title={`Now Playing in ${countryName}`} />
           </>
         }
       />
     </SafeAreaView>
   );
-});
-
-const styles = StyleSheet.create({
-  container: {
-    // flex: 1,
-    // padding: 10,
-    // overflow: "visible",
-    // paddingBottom: 80, // Add bottom padding to ensure content is not hidden behind the tab bar
-  },
-  title: {
-    fontWeight: "bold",
-    fontSize: 30,
-    fontStyle: "normal",
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    marginVertical: 10,
-  },
-  seeAll: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
 });

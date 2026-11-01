@@ -4,7 +4,7 @@
 
 [![Download Apk](https://custom-icon-badges.demolab.com/badge/-Download_From_Github-black?style=for-the-badge&logo=download&logoColor=white)](https://github.com/roshang1t/NetPrime/releases/latest)
 
-[![Download Apk](https://custom-icon-badges.demolab.com/badge/-Download_Instantly_From_Github-black?style=for-the-badge&logo=download&logoColor=white)](https://github.com/roshang1t/NetPrime/releases/download/v2.0.0/Netprime.V2.0.0.apk)  
+[![Download Apk](https://custom-icon-badges.demolab.com/badge/-Download_Instantly_From_Github-black?style=for-the-badge&logo=download&logoColor=white)](https://github.com/roshang1t/NetPrime/releases/download/v3.0.0/app-release.apk)  
 
 <img src="https://raw.githubusercontent.com/roshang1t/NetPrime/refs/heads/master/assets/images/icon.png" width="200" height="200">
 
